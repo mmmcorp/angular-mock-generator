@@ -11,21 +11,37 @@ function Mock(moduleName, pathToSrc, isDebug) {
 
   const parsed = path.parse(this.pathToSrc);
   const nameSpace = camelCase(parsed.dir);
+  const nameSpaceAngular = nameSpace + properCase(parsed.name);
   this.src = require(pathToSrc);
+
+  this.readable = new stream.Readable();
 
   this.pkgs = {};
   this.pkgs.angular = {
     stream: isDebug ? process.stdout : fs.createWriteStream(`${rename(pathToSrc, 'angular')}`),
-    template: `angular.module('${this.moduleName}').value('${nameSpace}', ${JSON.stringify(this.src)});`,
+    template: `angular.module('${this.moduleName}').value('${nameSpaceAngular}', ${JSON.stringify(this.src)});`,
   };
   this.pkgs.nodejs = {
     stream: isDebug ? process.stdout : fs.createWriteStream(`${rename(pathToSrc, 'node')}`),
-    template: `module.exports = function() {${this.pkgs.angular.template}};`,
+    template: `
+      module.exports = function() {
+        angular.module('${this.moduleName}').value('${nameSpace}', ${JSON.stringify(this.src)});
+      }
+    `,
   };
   this.keys = Object.keys(this.pkgs);
 }
 
 function noop() {}
+
+function properCase(str) {
+  if (str === 'default') {
+    return '';
+  }
+  const bytes = str.split('');
+  bytes[0] = bytes[0].toUpperCase();
+  return bytes.join('');
+}
 
 function rename (srcName, addition) {
   const parsed = path.parse(srcName);
